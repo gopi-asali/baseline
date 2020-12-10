@@ -2,6 +2,7 @@ import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import java.util.Calendar
 
+import org.apache.log4j.{Level, LogManager}
 import org.apache.spark.sql.expressions.UserDefinedFunction
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
@@ -22,6 +23,8 @@ object CustomerCountCalculator {
         case 2 => cal.set(Calendar.DATE, 14)
         case 3 => cal.set(Calendar.DATE, 21)
         case 4 =>
+          cal.set(Calendar.DATE, 28)
+        case _ =>
           cal.set(Calendar.DATE, cal.getActualMaximum(Calendar.DATE))
       }
 
@@ -36,30 +39,32 @@ object CustomerCountCalculator {
   )
   def main(args: Array[String]): Unit = {
 
-
+//    LogManager.getRootLogger.setLevel(Level.OFF)
     val spark: SparkSession = SparkSession
       .builder()
       .master("local")
       .appName("customer_count")
       .getOrCreate()
 
+    spark.sparkContext.setLogLevel("OFF")
+
     val sourceDataFrame = spark.read
       .option("header", "true")
-      .csv("C:\\Users\\gopasali\\Documents\\rt.csv").cache()
+      .csv("C:\\Users\\gopasali\\Documents\\rt.csv").limit(1000).cache()
+
+
     val weekCount = sourceDataFrame
       .withColumn(
         "weekofmonth",
-        getWeekOfMonth(col("ts"), lit("dd/MM/yyyy HH:mm"))
+        getWeekOfMonth(col("ts"), lit("MM/dd/yyyy HH:mm"))
       )
       .groupBy("weekofmonth", "number")
       .count().orderBy("weekofmonth").cache()
 
-    weekCount.show()
 
     val dates: Array[Timestamp] =
       weekCount.select("weekofmonth").distinct().collect().map(_.getTimestamp(0))
 
-    weekCount.show(false)
     val startDat = dates.head
 
     println(startDat)
@@ -70,7 +75,7 @@ object CustomerCountCalculator {
        val updateddf =  df.where(s"weekofmonth='$week'")
           .groupBy("weekofmonth")
           .agg(sum("count").as(week.toString))
-          .withColumn("week", lit(week.toString))
+          .withColumn("week", lit(week.toString)).select("week","weekofmonth","count")
 
         updateddf.show(false)
         updateddf
@@ -87,7 +92,7 @@ object CustomerCountCalculator {
               .groupBy(weekCount("weekofmonth"))
               .agg(sum(weekCount("count").as("count")))
               .collect()
-              .map(_.get(0).toString)
+              .map(_.get(1).toString)
               .head
 
             (week, count)
