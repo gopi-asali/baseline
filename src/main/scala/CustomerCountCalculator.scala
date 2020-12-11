@@ -72,10 +72,12 @@ object CustomerCountCalculator {
     dates.foldLeft(weekCount)((df, week) => {
 
       val updatedDf: DataFrame = if (startDat == week) {
+
+        val columnName = week.toString.split(" ")(0).replace("-","/")
        val updateddf =  df.where(s"weekofmonth='$week'")
           .groupBy("weekofmonth")
-          .agg(sum("count").as(week.toString))
-          .withColumn("week", lit(week.toString)).select("week","weekofmonth","count")
+          .agg(sum("count").as(columnName))
+          .withColumn("week", lit(week.toString)).select("week","weekofmonth",columnName)
 
         updateddf.show(false)
         updateddf
@@ -95,7 +97,8 @@ object CustomerCountCalculator {
               .map(_.get(1).toString)
               .head
 
-            (week, count)
+            val columnName = week.toString.split(" ")(0).replace("-","/")
+            (columnName, count)
 
           })
           .foldLeft(df)((df, tup) => {
