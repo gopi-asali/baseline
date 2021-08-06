@@ -1,9 +1,11 @@
 import java.io.File
 
 import USABaseLineScala.getClass
+import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
+import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.DoubleType
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
 
 
 object USABaseLineSpark {
@@ -27,6 +29,15 @@ object USABaseLineSpark {
     })
 
     def cleanDf(df: DataFrame): DataFrame = {
+
+
+      /*val encode: ExpressionEncoder[Row] = RowEncoder(df.schema)
+      val dataset: Dataset[Row] = df.map(row => {
+       val newVal =  row.getInt(0)+1
+        val updatedRow :Row = new GenericRowWithSchema(row.toSeq.patch(0,Seq(newVal),1).toArray,df.schema)
+        updatedRow
+      })(encode)*/
+
       val trimmedDf = df.columns.foldLeft(df)((df: DataFrame, column: String) => {
         df.withColumn(column, trim(col(column)))
       }
